@@ -2,7 +2,10 @@ import React from 'react';
 import { Route, } from "react-router-dom";
 import './App.css';
 import { Dispenser } from './pages/Dispenser';
-import { Maintenace } from './pages/Maintenance';
+import { Maintenance } from './pages/Maintenance';
+
+import 'react-toastify/dist/ReactToastify.css'
+import { ToastContainer} from 'react-toastify'
 
 function App() {
   return (
@@ -10,11 +13,13 @@ function App() {
       <header className="App-header">
         <Route path="/">
           <Dispenser />
+          <Maintenance />
         </Route>
         <Route path="/maint">
-          <Maintenace />
+
         </Route>
       </header>
+      <ToastContainer/>
     </div>
   );
 }

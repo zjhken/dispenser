@@ -1,14 +1,23 @@
 import express from "express"
 import {JsonDB} from "node-json-db"
 import {Config} from 'node-json-db/dist/lib/JsonDBConfig'
+import * as bodyParser from "body-parser";
 
 
 const app = express()
 
 const db = new JsonDB(new Config("db.json", true, true))
 
+app.use(bodyParser.text({type: "text/plain"}))
+
+app.use(function (req, res, next) {
+	req.body = JSON.parse(req.body)
+	next()
+})
+
 app.use("/", function (req, res, next) {
 	try {
+		res.setHeader("Access-Control-Allow-Origin", "*")
 		next()
 	} catch (e) {
 		res.statusCode = 500
@@ -20,7 +29,12 @@ app.post("/api/temperature", function (req, res) {
 	const machineId = req.body.machine_id
 	const timestamp = req.body.timestamp
 	const temperature = req.body.temperature
-	db.push(`/temp/${machineId}[]`, {timestamp, temp: temperature})
+
+	const length = db.count(`/temp/${machineId}`)
+	if (length === 30) {
+		db.delete(`/temp/${machineId}[0]`)
+	}
+	db.push(`/temp/${machineId}[]`, {timestamp, temp: temperature});
 	res.send({success: "submitted successfully"})
 })
 
