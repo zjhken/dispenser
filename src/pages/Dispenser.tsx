@@ -1,9 +1,14 @@
 import React, {useContext, useEffect, useState} from "react";
 import {DispenserStyle} from "./DispenserStyle";
-import {GlobalContext} from "../context/GlobalContext";
+import {GlobalContext, GlobalContextType} from "../context/GlobalContext";
 import {useHttp} from "../utils/HttpKit";
 import {Button} from "../components/Button";
-import { toast } from 'react-toastify';
+import {toast} from 'react-toastify';
+
+const tempDecreasePerServe = 10
+const tempIncreasePerSecond = 3
+const lowStockThreshold = 25
+const machineId = "hahahahaha"
 
 export function Dispenser() {
 
@@ -13,21 +18,80 @@ export function Dispenser() {
 
 	const [isLoading, setIsLoading] = useState(false)
 
-	const {tempList, setTempList,} = useContext(GlobalContext)
+	const {
+		milkQty, setMilkQty,
+		coffeeQty, setCoffeeQty,
+		teaQty, setTeaQty,
+		sugarQty, setSugarQty,
+	} = useContext(GlobalContext) as GlobalContextType
 
 	const [currTemp, setCurrTemp] = useState(100)
+
+	async function reportLowStock(item: string){
+		await post("lowstockalert", {
+			machine_id: machineId,
+			timestamp: new Date().getTime(),
+			item
+		})
+	}
 
 	function handleSubmit() {
 		setIsLoading(true)
 		setCurrTemp(prev => {
-			let t2 = prev - 1
+			let t2 = prev - tempDecreasePerServe
 			if (t2 < 37) {
 				t2 = 37
 			}
 			return t2
 		})
+		let toastMsg = "Done! Please take it"
+		if (needMilk) {
+			if (milkQty >= 1) {
+				if(milkQty - 1 <= lowStockThreshold){
+					reportLowStock("milk")
+				}
+				setMilkQty(prev => prev -1)
+			}
+			else{
+				toastMsg = "Sorry, not enough milk"
+			}
+		}
+		if (needSugar) {
+			if (sugarQty >= 1) {
+				if(sugarQty - 1 <= lowStockThreshold){
+					reportLowStock("sugar")
+				}
+				setSugarQty(prev => prev -1)
+			}
+			else{
+				toastMsg = "Sorry, not enough sugar"
+			}
+		}
+		if (isCoffee) {
+			if (coffeeQty >= 1) {
+				if(coffeeQty - 1 <= lowStockThreshold){
+					reportLowStock("coffee")
+				}
+				setCoffeeQty(prev => prev -1)
+			}
+			else{
+				toastMsg = "Sorry, not enough coffee"
+			}
+		}
+		if (!isCoffee) {
+			if (teaQty >= 1) {
+				if(teaQty - 1 <= lowStockThreshold){
+					reportLowStock("tea")
+				}
+				setTeaQty(prev => prev -1)
+			}
+			else{
+				toastMsg = "Sorry, not enough tea"
+			}
+		}
+
 		setTimeout(function () {
-			toast("Done! Please take it")
+			toast(toastMsg)
 			setIsLoading(false)
 		}, 1000)
 
@@ -38,8 +102,16 @@ export function Dispenser() {
 	useEffect(() => {
 		const timer = setInterval(function () {
 			async function uploadTemp() {
-				const rtn = await post("temperature", {
-					machine_id: "hahahahaha",
+				setCurrTemp(prev => {
+					if(prev + tempIncreasePerSecond < 100){
+						return prev + tempIncreasePerSecond
+					}
+					else{
+						return 100
+					}
+				})
+				await post("temperature", {
+					machine_id: machineId,
 					timestamp: new Date().getTime(),
 					temperature: currTemp
 				})
@@ -50,7 +122,7 @@ export function Dispenser() {
 		return function () {
 			clearInterval(timer)
 		}
-	}, [currTemp])
+	}, [currTemp, post])
 
 
 	return <DispenserStyle className="w-1/2">
@@ -64,7 +136,9 @@ export function Dispenser() {
 									isLoading={false}
 									isSelected={isCoffee}
 									size={"large"}
-									icon="☕"/>
+									icon="☕"
+									disabled={coffeeQty <= 0}
+					/>
 				</div>
 				<div className="w-1/6">or</div>
 				<div className="w-2/5 flex-1">
@@ -75,34 +149,38 @@ export function Dispenser() {
 									isLoading={false}
 									isSelected={!isCoffee}
 									size={"large"}
-									icon={"🍵"}/>
+									icon={"🍵"}
+									disabled={teaQty <= 0}
+					/>
 				</div>
 			</div>
 			<div className="flex-1 w-full my-1">with</div>
 			<div className="flex-1 flex-row space-x-4">
-				<button
-						className={"text-3xl flex-1 hover:shadow-xl hover:bg-purple-300 rounded-md" + (needSugar ? " bg-blue-300" : "")}
+				<Button
+						text={"🍬sugar"}
+						isLoading={false}
+						isSelected={needSugar}
+						size={"small"}
+						icon={""}
+						disabled={sugarQty <= 0}
 						onClick={() => {
 							setNeedSugar(prev => !prev)
 						}}
-				>🍬sugar
-				</button>
+				/>
 				<span>and/or</span>
-				<button
-						className={"text-3xl flex-1 hover:shadow-xl hover:bg-purple-300 rounded-md" + (needMilk ? " bg-blue-300" : "")}
+				<Button
+						text={"🍼milk"}
+						isLoading={false}
+						isSelected={needMilk}
+						size={"small"}
+						icon={""}
+						disabled={milkQty <= 0}
 						onClick={() => {
 							setNeedMilk(prev => !prev)
 						}}
-				>🍼milk
-				</button>
+				/>
 			</div>
-			<Button onClick={handleSubmit} text="Make it!" isLoading={isLoading} isSelected={false} size={"small"} icon={""}/>
-			{/*<button*/}
-			{/*		className="w-64 bg-blue-500 hover:bg-gray-100 font-semibold py-2 px-4 border border-gray-400 rounded shadow"*/}
-			{/*		onClick={handleSubmit}*/}
-			{/*>*/}
-			{/*	Make it!*/}
-			{/*</button>*/}
+			<Button onClick={handleSubmit} text="Make it!" isLoading={isLoading} isSelected={false} size={"small"} icon={""} disabled={isLoading}/>
 
 		</div>
 	</DispenserStyle>

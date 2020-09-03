@@ -38,7 +38,7 @@ app.post("/api/temperature", function (req, res) {
 	res.send({success: "submitted successfully"})
 })
 
-app.get("/api/temperature", function (req, res) {
+app.post("/api/get-temperature", function (req, res) {
 	const machineId = req.body.machine_id
 	const list = db.getData(`/temp/${machineId}`)
 	list.slice(1).slice(-30)
@@ -48,8 +48,8 @@ app.get("/api/temperature", function (req, res) {
 app.post("/api/lowstockalert", function (req, res) {
 	const machineId = req.body.machine_id
 	const timestamp = req.body.timestamp
-	const stock = req.body.stock
-	db.push(`/stock/${machineId}`, {timestamp, stock})
+	const item = req.body.item
+	db.push(`/stock/${machineId}`, {timestamp, item})
 	res.send({success: "submitted successfully"})
 })
 

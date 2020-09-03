@@ -19,4 +19,9 @@ export const MaintenanceStyle = styled.div`
 			font-size: 11px;
 	}
 	
+	.chart {
+		width: 100%;
+		height: 500px;
+	}
+	
 `
